@@ -100,7 +100,7 @@
   "Free a decompression context."
   (dctx :pointer))
 
-(cffi:defcfun ("ZSTD_decompressStream" zstd-decompree-stream) :unsigned-long-long
+(cffi:defcfun ("ZSTD_decompressStream" zstd-decompress-stream) :unsigned-long-long
   "Decompress the data."
   (zds :pointer)
   (output :pointer)

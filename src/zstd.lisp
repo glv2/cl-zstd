@@ -34,7 +34,7 @@
 ;;;
 
 (defun compress (context input output)
-  "Read the data from the INPUT octet stream, compress it with the ENCODER, and
+  "Read the data from the INPUT octet stream, compress it with the CONTEXT, and
 write the result to the OUTPUT octet stream."
   (let* ((input-buffer-size (zstd-c-stream-in-size))
          (input-buffer (cffi:make-shareable-byte-vector input-buffer-size))
@@ -54,11 +54,11 @@ write the result to the OUTPUT octet stream."
         (labels ((read-data ()
                    (setf pos 0)
                    (setf size (read-sequence input-buffer input)))
-                 (out-pos ()
-                   (cffi:foreign-slot-value out-buffer
-                                            '(:struct zstd-out-buffer)
-                                            'pos))
                  (compress-and-write-data (last-chunk-p)
+                   (setf (cffi:foreign-slot-value out-buffer
+                                                  '(:struct zstd-out-buffer)
+                                                  'pos)
+                         0)
                    (let* ((mode (if last-chunk-p
                                     :zstd-e-end
                                     :zstd-e-continue))
@@ -66,8 +66,12 @@ write the result to the OUTPUT octet stream."
                                       (zstd-compress-stream2 context
                                                              out-buffer
                                                              in-buffer
-                                                             mode))))
-                     (write-sequence output-buffer output :end (out-pos))
+                                                             mode)))
+                          (out-pos (cffi:foreign-slot-value
+                                    out-buffer
+                                    '(:struct zstd-out-buffer)
+                                    'pos)))
+                     (write-sequence output-buffer output :end out-pos)
                      (let ((finished (if last-chunk-p
                                          (= remaining 0)
                                          (= pos size))))
@@ -120,13 +124,73 @@ and return the resulting octet vector."
 ;;;
 
 (defun decompress (context input output)
-  )
+  "Read the data from the INPUT octet stream, decompress it with the CONTEXT,
+and write the result to the OUTPUT octet stream."
+  (let* ((input-buffer-size (zstd-d-stream-in-size))
+         (input-buffer (cffi:make-shareable-byte-vector input-buffer-size))
+         (output-buffer-size (zstd-d-stream-out-size))
+         (output-buffer (cffi:make-shareable-byte-vector output-buffer-size)))
+    (cffi:with-foreign-objects ((in-buffer '(:struct zstd-in-buffer))
+                                (out-buffer '(:struct zstd-out-buffer)))
+      (cffi:with-foreign-slots ((dst size) out-buffer
+                                (:struct zstd-out-buffer))
+        (cffi:with-pointer-to-vector-data (ffi-output-buffer output-buffer)
+          (setf dst ffi-output-buffer))
+        (setf size output-buffer-size))
+      (cffi:with-foreign-slots ((src size pos) in-buffer
+                                (:struct zstd-in-buffer))
+        (cffi:with-pointer-to-vector-data (ffi-input-buffer input-buffer)
+          (setf src ffi-input-buffer))
+        (labels ((read-data ()
+                   (setf pos 0)
+                   (setf size (read-sequence input-buffer input)))
+                 (decompress-and-write-data ()
+                   (setf (cffi:foreign-slot-value out-buffer
+                                                  '(:struct zstd-out-buffer)
+                                                  'pos)
+                         0)
+                   (let* ((ret (zstd-check (zstd-decompress-stream context
+                                                                   out-buffer
+                                                                   in-buffer)))
+                          (out-pos (cffi:foreign-slot-value
+                                    out-buffer
+                                    '(:struct zstd-out-buffer)
+                                    'pos)))
+                     (write-sequence output-buffer output :end out-pos)
+                     (if (< pos size)
+                         (decompress-and-write-data)
+                         ret)))
+                 (decompress-data ()
+                   (let ((n (read-data)))
+                     (if (zerop n)
+                         t
+                         (let ((ret (decompress-and-write-data)))
+                           (if (zerop ret)
+                               (decompress-data)
+                               (zstd-error "Truncated stream.")))))))
+          (decompress-data))))))
 
 (defun decompress-stream (input output)
-  )
+  "Read the data from the INPUT octet stream, decompress it, and write the
+result to the OUTPUT octet stream."
+  (let ((context (zstd-create-dctx)))
+    (if (cffi:null-pointer-p context)
+        (zstd-error "Failed to create decompression context.")
+        (unwind-protect
+             (decompress context input output)
+          (zstd-check (zstd-free-dctx context))))))
 
 (defun decompress-file (input output)
-  )
+  "Read the data from the INPUT file, decompress it, and write the result to
+the OUTPUT file."
+  (with-open-file (input-stream input :element-type 'u8)
+    (with-open-file (output-stream output :direction :output :element-type 'u8)
+      (decompress-stream input-stream output-stream))))
 
 (defun decompress-buffer (buffer &key (start 0) end)
-  )
+  "Read the data between the START and END offsets in the BUFFER, decompress
+it, and return the resulting octet vector."
+  (let ((end (or end (length buffer))))
+    (octet-streams:with-octet-output-stream (output)
+      (octet-streams:with-octet-input-stream (input buffer start end)
+        (decompress-stream input output)))))
