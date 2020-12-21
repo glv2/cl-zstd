@@ -1,0 +1,98 @@
+#+TITLE: cl-zstd
+#+AUTHOR: Guillaume LE VAILLANT
+#+DATE: 2020-12-21
+#+EMAIL: glv@posteo.net
+#+LANGUAGE: en
+#+OPTIONS: num:nil toc:nil html-postamble:nil html-scripts:nil
+#+HTML_DOCTYPE: html5
+
+* Description
+
+*cl-zstd* is a Common Lisp library for Zstandard compression/decompression
+using bindings to the libzstd C library.
+
+* License
+
+*cl-zstd* is released under the GPL-3 license or later. See the [[file:LICENSE][LICENSE]] file
+for details.
+
+* Dependencies
+
+*cl-zstd* requires:
+ - [[https://common-lisp.net/project/cffi/][cffi]]
+ - [[https://github.com/glv2/cl-octet-streams][cl-octet-streams]]
+ - [[https://facebook.github.io/zstd/][libzstd]]
+
+There should be a package providing *libzstd* in almost every GNU/Linux or *BSD
+distribution. For example it is called /libzstd1/ on Debian, /zstd/ on Gentoo,
+and /zstd:lib/ on Guix.
+
+* API
+
+The library can be loaded with the usual:
+
+#+BEGIN_SRC lisp
+(asdf:load-system "zstd")
+#+END_SRC
+
+or
+
+#+BEGIN_SRC lisp
+(quicklisp:quickload "zstd")
+#+END_SRC
+
+The functions will then be available in the ~zstd~ package.
+
+** Compression
+
+#+BEGIN_SRC lisp
+(compress-stream input output &key level) => t
+#+END_SRC
+
+Read the data from the /input/ octet stream, compress it, and write the result
+to the /output/ octet stream.
+
+#+BEGIN_SRC lisp
+(compress-file input output &key level) => t
+#+END_SRC
+
+Read the data from the /input/ file, compress it, and write the result to the
+/output/ file.
+
+#+BEGIN_SRC lisp
+(compress-buffer buffer &key start end level) => bytes
+#+END_SRC
+
+Read the data between the /start/ and /end/ offsets in the /buffer/, compress
+it, and return the resulting octet vector.
+
+** Decompression
+
+#+BEGIN_SRC lisp
+(decompress-stream input output) => t
+#+END_SRC
+
+Read the data from the /input/ octet stream, decompress it, and write the result
+to the /output/ octet stream.
+
+#+BEGIN_SRC lisp
+(decompress-file input output) => t
+#+END_SRC
+
+Read the data from the /input/ file, decompress it, and write the result to the
+/output/ file.
+
+#+BEGIN_SRC lisp
+(decompress-buffer buffer &key start end) => bytes
+#+END_SRC
+
+Read the data between the /start/ and /end/ offsets in the /buffer/, decompress
+it, and return the resulting octet vector.
+
+* Tests
+
+The tests require the [[https://common-lisp.net/project/fiveam/][fiveam]] package. They can be run with:
+
+#+BEGIN_SRC lisp
+(asdf:test-system "zstd")
+#+END_SRC
