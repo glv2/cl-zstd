@@ -24,6 +24,7 @@
 (defmacro zstd-check (form)
   (let ((code (gensym)))
     `(let ((,code ,form))
+       (declare (type u64 ,code))
        (if (= (zstd-is-error ,code) 1)
            (zstd-error (zstd-get-error-name ,code))
            ,code))))
@@ -36,10 +37,12 @@
 (defun compress (context input output)
   "Read the data from the INPUT octet stream, compress it with the CONTEXT, and
 write the result to the OUTPUT octet stream."
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 1)))
   (let* ((input-buffer-size (zstd-c-stream-in-size))
          (input-buffer (cffi:make-shareable-byte-vector input-buffer-size))
          (output-buffer-size (zstd-c-stream-out-size))
          (output-buffer (cffi:make-shareable-byte-vector output-buffer-size)))
+    (declare (type u64 input-buffer-size output-buffer-size))
     (cffi:with-foreign-objects ((in-buffer '(:struct zstd-in-buffer))
                                 (out-buffer '(:struct zstd-out-buffer)))
       (cffi:with-foreign-slots ((dst size) out-buffer
@@ -55,6 +58,7 @@ write the result to the OUTPUT octet stream."
                    (setf pos 0)
                    (setf size (read-sequence input-buffer input)))
                  (compress-and-write-data (last-chunk-p)
+                   (declare (type boolean last-chunk-p))
                    (setf (cffi:foreign-slot-value out-buffer
                                                   '(:struct zstd-out-buffer)
                                                   'pos)
@@ -71,11 +75,13 @@ write the result to the OUTPUT octet stream."
                                     out-buffer
                                     '(:struct zstd-out-buffer)
                                     'pos)))
+                     (declare (type u64 remaining out-pos))
                      (write-sequence output-buffer output :end out-pos)
-                     (let ((finished (if last-chunk-p
-                                         (= remaining 0)
-                                         (= pos size))))
-                       (unless finished
+                     (let ((finished-p (if last-chunk-p
+                                           (= remaining 0)
+                                           (= pos size))))
+                       (declare (type boolean finished-p))
+                       (unless finished-p
                          (compress-and-write-data last-chunk-p)))))
                  (compress-data ()
                    (let ((last-chunk-p (< (read-data) input-buffer-size)))
@@ -126,10 +132,12 @@ and return the resulting octet vector."
 (defun decompress (context input output)
   "Read the data from the INPUT octet stream, decompress it with the CONTEXT,
 and write the result to the OUTPUT octet stream."
+  (declare (optimize (speed 3) (space 0) (debug 0) (safety 1)))
   (let* ((input-buffer-size (zstd-d-stream-in-size))
          (input-buffer (cffi:make-shareable-byte-vector input-buffer-size))
          (output-buffer-size (zstd-d-stream-out-size))
          (output-buffer (cffi:make-shareable-byte-vector output-buffer-size)))
+    (declare (type u64 input-buffer-size output-buffer-size))
     (cffi:with-foreign-objects ((in-buffer '(:struct zstd-in-buffer))
                                 (out-buffer '(:struct zstd-out-buffer)))
       (cffi:with-foreign-slots ((dst size) out-buffer
@@ -156,11 +164,13 @@ and write the result to the OUTPUT octet stream."
                                     out-buffer
                                     '(:struct zstd-out-buffer)
                                     'pos)))
+                     (declare (type u64 ret out-pos))
                      (write-sequence output-buffer output :end out-pos)
                      (if (< pos size)
                          (decompress-and-write-data)
                          ret)))
                  (decompress-data (ret)
+                   (declare (type u64 ret))
                    (if (zerop (read-data))
                        (or (zerop ret) (zstd-error "Truncated stream."))
                        (decompress-data (decompress-and-write-data)))))
