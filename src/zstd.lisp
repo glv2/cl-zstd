@@ -160,15 +160,11 @@ and write the result to the OUTPUT octet stream."
                      (if (< pos size)
                          (decompress-and-write-data)
                          ret)))
-                 (decompress-data ()
-                   (let ((n (read-data)))
-                     (if (zerop n)
-                         t
-                         (let ((ret (decompress-and-write-data)))
-                           (if (zerop ret)
-                               (decompress-data)
-                               (zstd-error "Truncated stream.")))))))
-          (decompress-data))))))
+                 (decompress-data (ret)
+                   (if (zerop (read-data))
+                       (or (zerop ret) (zstd-error "Truncated stream."))
+                       (decompress-data (decompress-and-write-data)))))
+          (decompress-data 0))))))
 
 (defun decompress-stream (input output)
   "Read the data from the INPUT octet stream, decompress it, and write the
