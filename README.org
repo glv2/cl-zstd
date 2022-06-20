@@ -1,6 +1,6 @@
 #+TITLE: cl-zstd
 #+AUTHOR: Guillaume LE VAILLANT
-#+DATE: 2020-12-21
+#+DATE: 2022-06-20
 #+EMAIL: glv@posteo.net
 #+LANGUAGE: en
 #+OPTIONS: num:nil toc:nil html-postamble:nil html-scripts:nil
@@ -19,9 +19,10 @@ for details.
 * Dependencies
 
 *cl-zstd* requires:
- - [[https://common-lisp.net/project/cffi/][cffi]]
+ - [[https://cffi.common-lisp.dev/][cffi]]
  - [[https://github.com/glv2/cl-octet-streams][cl-octet-streams]]
  - [[https://facebook.github.io/zstd/][libzstd]]
+ - [[https://trivial-gray-streams.common-lisp.dev/][trivial-gray-streams]]
 
 There should be a package providing *libzstd* in almost every GNU/Linux or *BSD
 distribution. For example it is called /libzstd1/ on Debian, /zstd/ on Gentoo,
@@ -66,6 +67,21 @@ Read the data from the /input/ file, compress it, and write the result to the
 Read the data between the /start/ and /end/ offsets in the /buffer/, compress
 it, and return the resulting octet vector.
 
+#+BEGIN_SRC lisp
+(make-compressing-stream output-stream &key level) => stream
+#+END_SRC
+
+Return a stream that will compress the bytes written to it at the given
+compression /level/ and write them to the /output-stream/.
+
+#+BEGIN_SRC lisp
+(with-compressing-stream (stream output-stream &key level) &body body)
+#+END_SRC
+
+Within /body/, /stream/ is bound to a compressing stream for the given
+compression /level/ and /output-stream/. The result of the last form of /body/
+is returned.
+
 ** Decompression
 
 #+BEGIN_SRC lisp
@@ -88,6 +104,20 @@ Read the data from the /input/ file, decompress it, and write the result to the
 
 Read the data between the /start/ and /end/ offsets in the /buffer/, decompress
 it, and return the resulting octet vector.
+
+#+BEGIN_SRC lisp
+(make-decompressing-stream input-stream) => stream
+#+END_SRC
+
+Return a stream that will supply the bytes resulting from the decompression of
+the data read from the /input-stream/.
+
+#+BEGIN_SRC lisp
+(with-decompressing-stream (stream input-stream) &body body)
+#+END_SRC
+
+Within /body/, /stream/ is bound to a decompressing stream for the given
+/input-stream/. The result of the last form of /body/ is returned.
 
 * Tests
 

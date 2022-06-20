@@ -1,5 +1,5 @@
 ;;; This file is part of cl-zstd
-;;; Copyright 2020 Guillaume LE VAILLANT
+;;; Copyright 2020-2022 Guillaume LE VAILLANT
 ;;; Distributed under the GNU GPL v3 or later.
 ;;; See the file LICENSE for terms of use and distribution.
 
@@ -38,6 +38,20 @@
 
 (in-suite zstd-unit-tests)
 
+
+(test decompressing-stream
+  (with-octet-input-stream (input #(40 181 47 253 36 5 41 0
+                                    0 1 2 3 4 5 47 214
+                                    192 132))
+    (let ((stream (make-decompressing-stream input))
+          (tmp (make-array 2 :element-type '(unsigned-byte 8))))
+      (is (= 1 (read-byte stream)))
+      (is (= 2 (read-byte stream)))
+      (is (= 2 (read-sequence tmp stream)))
+      (is (equalp #(3 4) tmp))
+      (is (= 5 (read-byte stream)))
+      (is (eql :eof (read-byte stream nil :eof)))
+      (close stream))))
 
 (test decompress-stream
   (is (equalp #()
@@ -91,6 +105,17 @@
   (signals zstd-error (decompress-buffer #(40 181 47 253)))
   (signals zstd-error (decompress-buffer #(40 181 47 253 36 5 41 0
                                            0 1 2 3))))
+
+(test compressing-stream
+  (let ((compressed (with-octet-output-stream (output)
+                      (let ((stream (make-compressing-stream output :level 9)))
+                        (write-byte 1 stream)
+                        (write-byte 2 stream)
+                        (write-sequence #(3 4 1 2 3 4 1 2 3 4) stream)
+                        (write-byte 5 stream)
+                        (close stream)))))
+    (is (equalp #(1 2 3 4 1 2 3 4 1 2 3 4 5)
+                (decompress-buffer compressed)))))
 
 (test compress-stream
   (is (equalp #()

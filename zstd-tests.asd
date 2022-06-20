@@ -1,12 +1,12 @@
 ;;; This file is part of cl-zstd
-;;; Copyright 2020 Guillaume LE VAILLANT
+;;; Copyright 2020-2022 Guillaume LE VAILLANT
 ;;; Distributed under the GNU GPL v3 or later.
 ;;; See the file LICENSE for terms of use and distribution.
 
 (defsystem "zstd-tests"
   :name "zstd-tests"
   :description "Tests for zstd"
-  :version "1.0"
+  :version "2.0"
   :author "Guillaume Le Vaillant"
   :license "GPL-3"
   :depends-on ("cl-octet-streams" "fiveam" "uiop" "zstd")
