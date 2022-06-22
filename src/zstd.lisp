@@ -58,11 +58,9 @@
     (cffi:with-foreign-slots ((size pos) zstd-in-buffer
                               (:struct zstd-in-buffer))
       (when (plusp pos)
-        (let ((remaining (- size pos)))
-          (replace input-buffer input-buffer
-                   :end1 remaining :start2 pos)
-          (setf size remaining)
-          (setf pos 0))))
+        (replace input-buffer input-buffer :start2 pos :end2 size)
+        (decf size pos)
+        (setf pos 0)))
     (cffi:with-foreign-slots ((pos) zstd-out-buffer
                               (:struct zstd-out-buffer))
       (when (plusp pos)
@@ -222,11 +220,9 @@ returned."
         (cffi:with-foreign-slots ((size pos) zstd-in-buffer
                                   (:struct zstd-in-buffer))
           (when (plusp pos)
-            (let ((remaining (- size pos)))
-              (replace input-buffer input-buffer
-                       :end1 remaining :start2 pos)
-              (setf size remaining)
-              (setf pos 0)))))
+            (replace input-buffer input-buffer :start2 pos :end2 size)
+            (decf size pos)
+            (setf pos 0))))
       end-of-input-p)))
 
 (defmethod stream-listen ((stream decompressing-stream))
@@ -247,7 +243,7 @@ returned."
         (cond
           ((plusp pos)
            (let ((byte (aref output-buffer 0)))
-             (replace output-buffer output-buffer :start2 1)
+             (replace output-buffer output-buffer :start2 1 :end2 pos)
              (decf pos)
              byte))
           ((and end-of-input-p (not (frame-complete-p stream)))
@@ -264,10 +260,9 @@ returned."
         (cffi:with-foreign-slots ((pos) zstd-out-buffer
                                   (:struct zstd-out-buffer))
           (loop :while (and (< start end) (plusp pos)) :do
-            (let* ((available-space (- end start))
-                   (n (min pos available-space)))
+            (let ((n (min (- end start) pos)))
               (replace seq output-buffer :start1 start :end2 n)
-              (replace output-buffer output-buffer :start2 n)
+              (replace output-buffer output-buffer :start2 n :end2 pos)
               (decf pos n)
               (incf start n)))))
       (when (and end-of-input-p (not (frame-complete-p stream)))
