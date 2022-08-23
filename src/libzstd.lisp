@@ -7,6 +7,8 @@
 
 
 (cffi:define-foreign-library libzstd
+                             #:+LISPWORKS8
+                             (:macosx "libzstd.dylib")
   (:unix (:or "libzstd.so"
               "libzstd.so.1"))
   (t (:default "libzstd")))
