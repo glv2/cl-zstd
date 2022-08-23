@@ -7,6 +7,7 @@
 
 
 (cffi:define-foreign-library libzstd
+  (:darwin "libzstd.dylib")
   (:unix (:or "libzstd.so"
               "libzstd.so.1"))
   (t (:default "libzstd")))
