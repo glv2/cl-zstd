@@ -6,6 +6,8 @@
 #+OPTIONS: num:nil toc:nil html-postamble:nil html-scripts:nil
 #+HTML_DOCTYPE: html5
 
+The active repository is at https://codeberg.org/glv/cl-zstd
+
 * Description
 
 *cl-zstd* is a Common Lisp library for Zstandard compression/decompression
@@ -20,7 +22,7 @@ for details.
 
 *cl-zstd* requires:
  - [[https://cffi.common-lisp.dev/][cffi]]
- - [[https://github.com/glv2/cl-octet-streams][cl-octet-streams]]
+ - [[https://codeberg.org/glv/cl-octet-streams][cl-octet-streams]]
  - [[https://facebook.github.io/zstd/][libzstd]]
  - [[https://trivial-gray-streams.common-lisp.dev/][trivial-gray-streams]]
 
